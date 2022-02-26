@@ -10,6 +10,8 @@ public interface IUserService {
 
     List<User> findAllUser();
 
+    List<User> search( String firstName,  String email,  int age);
+
     User getUserById(String id);
 
     void updateUser(String id, User user);

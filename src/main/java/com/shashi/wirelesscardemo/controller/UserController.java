@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.Nullable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,20 +25,42 @@ public class UserController {
 
     //The function receives a POST request, processes it, creates a new user
     @PostMapping(value = "/users")
-    public ResponseEntity<UserResponse> createUser(@RequestBody User user)  {
-        LOG.info("request received for create  is :{}", user );
+    public ResponseEntity<UserResponse> createUser(@RequestBody User user) {
+        LOG.info("request received for create  is :{}", user);
         UserResponse userResponse = userService.createUser(user);
         LOG.info(" create  user request is:{} response  is :{}", user, userResponse);
         return new ResponseEntity<>(userResponse, HttpStatus.CREATED);
     }
 
 
+//    //The function receives a GET request, processes it and gives back a list of
+//    @GetMapping
+//    public ResponseEntity<List<User>> getAllUsers() {
+//        List<User> userList = userService.findAllUser();
+//        return new ResponseEntity<>(userList, HttpStatus.OK);
+//    }
+
     //The function receives a GET request, processes it and gives back a list of
-    @GetMapping
-    public ResponseEntity<List<User>> getAllUsers() {
-        List<User> userList = userService.findAllUser();
+    @GetMapping(value = "/search")
+    public ResponseEntity<List<User>> getSearch(@Nullable @RequestParam String firstName, @Nullable @RequestParam String email, @Nullable @RequestParam Integer age) {
+        List<User> userList = userService.search(firstName, email, age);
         return new ResponseEntity<>(userList, HttpStatus.OK);
     }
+
+//    @GetMapping({"/firstName"})
+//    public ResponseEntity<List<User>> getSearch(@PathVariable(value = "firstname") String firstName, @RequestParam String email) {
+//        List<User> userList = userService.search(firstName, email, 100);
+//        return new ResponseEntity<>(userList, HttpStatus.OK);
+//    }
+
+    @GetMapping({"/search1"})
+    public ResponseEntity<List<User>> getSearch1(String firstName) {
+        System.out.println("trigger " + firstName);
+//        List<User> userList = userService.search(firstName, email, age);
+        return new ResponseEntity<>(null, HttpStatus.OK);
+    }
+
+
     //The function receives a GET request with id in the url path, processes it and returns
     @GetMapping({"/{id}"})
     public ResponseEntity<User> getUser(@PathVariable String id) {
@@ -50,6 +73,7 @@ public class UserController {
         userService.updateUser(emailId, user);
         return new ResponseEntity<>(userService.getUserById(emailId), HttpStatus.OK);
     }
+
     //The function receives a DELETE request, deletes the User with the specified Id.
     @DeleteMapping({"/{emailId}"})
     public ResponseEntity<User> deleteUser(@PathVariable("emailId") String emailId) {
