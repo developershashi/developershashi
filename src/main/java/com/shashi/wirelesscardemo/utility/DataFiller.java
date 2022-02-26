@@ -1,18 +1,15 @@
 package com.shashi.wirelesscardemo.utility;
 
 import com.google.gson.Gson;
-import com.shashi.wirelesscardemo.pojo.User;
+import com.shashi.wirelesscardemo.models.User;
 import com.shashi.wirelesscardemo.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Repository;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 @Component

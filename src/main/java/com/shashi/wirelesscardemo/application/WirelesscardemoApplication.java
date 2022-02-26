@@ -10,8 +10,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 
 @ComponentScan(basePackages = "com.shashi.wirelesscardemo")
-@EnableJpaRepositories(basePackages = "com.shashi.wirelesscardemo")
-@EntityScan(basePackages = "com.shashi.wirelesscardemo.pojo")
+@EnableJpaRepositories(basePackages = "com.shashi.wirelesscardemo.repository")
+@EntityScan(basePackages = "com.shashi.wirelesscardemo")
 @SpringBootApplication
 public class WirelesscardemoApplication implements CommandLineRunner {
 
