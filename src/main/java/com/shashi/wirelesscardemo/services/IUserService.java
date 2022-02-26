@@ -10,7 +10,7 @@ public interface IUserService {
 
     List<User> findAllUser();
 
-    List<User> search( String firstName,  String email,  int age);
+    List<User> search( String firstName,  String email,  Integer age);
 
     User getUserById(String id);
 

@@ -18,9 +18,13 @@ import org.springframework.util.StringUtils;
 import javax.persistence.criteria.Predicate;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+
+import static com.fasterxml.jackson.databind.type.LogicalType.DateTime;
 
 @Service
 public class UserService implements IUserService {
@@ -46,23 +50,44 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public List<User> search(String firstName, String email, int age) {
+    public List<User> search(String firstName, String email, Integer age) {
 
         List<User> list = null;
         UserDto dto = new UserDto();
 
         if (!StringUtils.isEmpty(firstName)) {
             dto.setFirstName(firstName);
-            list = userRepository.findAll(getSpecification(dto));
-        } else if (!StringUtils.isEmpty(email)) {
+        }
+        if (!StringUtils.isEmpty(email)) {
             dto.setEmail(email);
-            list = userRepository.findAll(getSpecification(dto));
-        } else if (!StringUtils.isEmpty(age)) {
+        }
+        if (!StringUtils.isEmpty(age)) {
             dto.setAge(age);
-            list = userRepository.findAll(getSpecification(dto));
         }
 
+        validator(dto);
+
+        list = userRepository.findAll(getSpecification(dto));
+
         return list;
+    }
+
+    private void validator(UserDto userDto){
+        if (StringUtils.isEmpty(userDto.getFirstName())) {
+
+        }
+
+        if (!StringUtils.isEmpty(userDto.getEmail())) {
+
+        }
+        if (!StringUtils.isEmpty(userDto.getAge())) {
+            if (userDto.getAge()<25 || userDto.getAge()>55){
+                throw new UserServiceException("Age not in range");
+            }
+
+        }
+
+
     }
 
     @Override
@@ -100,11 +125,18 @@ public class UserService implements IUserService {
             }
 
             if (!StringUtils.isEmpty(request.getAge())) {
+                String dateFormat="dd.MM.yyyy";
+
+//                SimpleDateFormat formatter = new SimpleDateFormat("dd.MM.yyyy");
+                LocalDate localDate = LocalDate.now().minusYears(request.getAge());
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern(dateFormat);
+                String outformat=formatter.format(localDate);
+                System.out.println(outformat);
 //                DateFormat format = new SimpleDateFormat("yyyy-MM-ddTHH:mm:ssZ");
-                DateFormat format = new SimpleDateFormat("dd-MM-yyyy");
+//                DateFormat format = new SimpleDateFormat("dd-MM-yyyy");
 //                Date date = format.parse(myString);
 
-                predicates.add(builder.and(builder.greaterThan(root.get("birthday"), request.getAge())));
+                predicates.add(builder.and(builder.greaterThan(root.get("birthday"), outformat)));
             }
 
             return builder.and(predicates.toArray(new Predicate[predicates.size()]));
