@@ -11,7 +11,7 @@ public interface IUserService {
 
     UserResponse createUser(UserDto user);
 
-    List<User> search(String firstName, Gender gender , Integer age);
+    List<User> search(String firstName, String gender , Integer age);
 
     void deleteUser(String emailId);
 }

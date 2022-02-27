@@ -1,5 +1,13 @@
 package com.shashi.wirelesscardemo.enums;
 
 public enum Gender {
-    Male,Female
+
+    AGENDER,
+    BIGENDER,
+    FEMALE,
+    GENDERFLUID,
+    GENDERQUEER,
+    MALE,
+    /*NON-BINARY,*/
+    POLYGENDER
 }

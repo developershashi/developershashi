@@ -26,6 +26,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 
 @Service
@@ -59,7 +60,7 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public List<User> search(String firstName, Gender gender, Integer age) {
+    public List<User> search(String firstName, String gender, Integer age) {
 
         List<User> list = null;
         UserRequestDto dto = new UserRequestDto();
@@ -109,7 +110,7 @@ public class UserService implements IUserService {
             }
 
             if (!StringUtils.isEmpty(request.getGender())) {
-                predicates.add(builder.and(builder.like(root.get("gender"), request.getGender().name())));
+                predicates.add(builder.and(builder.equal(root.get("gender"), request.getGender().toUpperCase(Locale.ROOT))));
             }
 
             if (!StringUtils.isEmpty(request.getAge())) {

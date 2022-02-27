@@ -1,6 +1,7 @@
 package com.shashi.wirelesscardemo.utility;
 
 import com.google.gson.Gson;
+import com.shashi.wirelesscardemo.enums.Gender;
 import com.shashi.wirelesscardemo.models.User;
 import com.shashi.wirelesscardemo.pojo.UserDto;
 import com.shashi.wirelesscardemo.repositories.UserRepository;
@@ -16,6 +17,7 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.stream.Collectors;
 
 @Component
@@ -40,7 +42,7 @@ public class Utility {
         List<User> collect = Arrays.stream(users).map(o -> {
             try {
                 Date date1 = new SimpleDateFormat("dd.MM.yyyy").parse(o.getBirthday());
-                return new User(o.getFirstName(), o.getLastName(), o.getEmail(), o.getGender(), date1);
+                return new User(o.getFirstName(), o.getLastName(), o.getEmail(), o.getGender().toUpperCase(Locale.ROOT), date1);
             } catch (ParseException e) {
                 e.printStackTrace();
             }
@@ -49,5 +51,8 @@ public class Utility {
 
         List<User> users1 = userRepository.saveAll(collect);
         System.out.println("users1 count -" + users1.size());
+        System.out.println("users1 print -" + users1.get(0));
+        System.out.println("-------------------------------------------------------------------");
+
     }
 }

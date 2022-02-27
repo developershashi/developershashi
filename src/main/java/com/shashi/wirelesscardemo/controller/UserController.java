@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 
 import java.util.List;
+import java.util.Locale;
 
 @RestController
 @RequestMapping("/v1/users")
@@ -50,8 +51,8 @@ public class UserController {
 
     //The function receives a GET request, processes it and gives back a list of
     @GetMapping(value = "/search")
-    public ResponseEntity<List<User>> getSearch(@Nullable @RequestParam String firstName, @Nullable @RequestParam Gender gender, @Nullable @RequestParam Integer age) {
-        List<User> userList = userService.search(firstName, gender, age);
+    public ResponseEntity<List<User>> getSearch(@Nullable @RequestParam String firstName, @Nullable @RequestParam String gender, @Nullable @RequestParam Integer age) {
+        List<User> userList = userService.search(firstName,gender , age);
         System.out.println(userList.size());
         return new ResponseEntity<>(userList, HttpStatus.OK);
     }

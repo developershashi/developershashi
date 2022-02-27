@@ -10,7 +10,7 @@ public class UserRequestDto {
     private String lastName;
     private String email;
     private Integer age;
-    private Gender gender;
+    private String gender;
 
     public String getFirstName() {
         return firstName;
@@ -44,11 +44,11 @@ public class UserRequestDto {
         this.age = age;
     }
 
-    public Gender getGender() {
+    public String getGender() {
         return gender;
     }
 
-    public void setGender(Gender gender) {
+    public void setGender(String gender) {
         this.gender = gender;
     }
 }

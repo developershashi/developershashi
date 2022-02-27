@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
+import com.shashi.wirelesscardemo.enums.Gender;
 
 import javax.annotation.Generated;
 import javax.persistence.*;
@@ -19,7 +20,12 @@ public class UserDto {
     @NotNull(message = "email may not be null")
     private String email;
     @NotNull(message = "firstName may not be null")
+    @SerializedName("first_name")
+    @Expose
+    @NotNull()
     private String firstName;
+    @SerializedName("last_name")
+    @Expose
     private String lastName;
     private String gender;
     private String birthday;
