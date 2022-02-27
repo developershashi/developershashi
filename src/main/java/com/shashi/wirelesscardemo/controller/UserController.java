@@ -1,5 +1,6 @@
 package com.shashi.wirelesscardemo.controller;
 
+import com.shashi.wirelesscardemo.enums.Gender;
 import com.shashi.wirelesscardemo.models.User;
 import com.shashi.wirelesscardemo.models.UserResponse;
 
@@ -49,8 +50,8 @@ public class UserController {
 
     //The function receives a GET request, processes it and gives back a list of
     @GetMapping(value = "/search")
-    public ResponseEntity<List<User>> getSearch(@Nullable @RequestParam String firstName, @Nullable @RequestParam String email, @Nullable @RequestParam Integer age) {
-        List<User> userList = userService.search(firstName, email, age);
+    public ResponseEntity<List<User>> getSearch(@Nullable @RequestParam String firstName, @Nullable @RequestParam Gender gender, @Nullable @RequestParam Integer age) {
+        List<User> userList = userService.search(firstName, gender, age);
         System.out.println(userList.size());
         return new ResponseEntity<>(userList, HttpStatus.OK);
     }

@@ -1,6 +1,7 @@
 package com.shashi.wirelesscardemo.services.impl;
 
 import com.shashi.wirelesscardemo.enums.CommonState;
+import com.shashi.wirelesscardemo.enums.Gender;
 import com.shashi.wirelesscardemo.exceptions.UserServiceException;
 import com.shashi.wirelesscardemo.mapper.UserMapper;
 import com.shashi.wirelesscardemo.models.User;
@@ -58,7 +59,7 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public List<User> search(String firstName, String email, Integer age) {
+    public List<User> search(String firstName, Gender gender, Integer age) {
 
         List<User> list = null;
         UserRequestDto dto = new UserRequestDto();
@@ -66,8 +67,8 @@ public class UserService implements IUserService {
         if (!StringUtils.isEmpty(firstName)) {
             dto.setFirstName(firstName);
         }
-        if (!StringUtils.isEmpty(email)) {
-            dto.setEmail(email);
+        if (!StringUtils.isEmpty(gender)) {
+            dto.setGender(gender);
         }
         if (!StringUtils.isEmpty(age)) {
             dto.setAge(age);
@@ -81,13 +82,10 @@ public class UserService implements IUserService {
     }
 
     private void validator(UserRequestDto userDto) {
-        if (StringUtils.isEmpty(userDto.getFirstName())) {
-
+        if (StringUtils.isEmpty(userDto.getFirstName()) && StringUtils.isEmpty(userDto.getGender()) &&StringUtils.isEmpty(userDto.getAge())) {
+            throw new UserServiceException("Anyone field is mandatory");
         }
 
-        if (!StringUtils.isEmpty(userDto.getEmail())) {
-
-        }
         if (!StringUtils.isEmpty(userDto.getAge())) {
             if (userDto.getAge() < 25 || userDto.getAge() > 55) {
                 throw new UserServiceException("Age not in range");
@@ -108,7 +106,10 @@ public class UserService implements IUserService {
 
             if (!StringUtils.isEmpty(request.getEmail())) {
                 predicates.add(builder.and(builder.like(root.get("email"), "%" + request.getEmail() + "%")));
+            }
 
+            if (!StringUtils.isEmpty(request.getGender())) {
+                predicates.add(builder.and(builder.like(root.get("gender"), request.getGender().name())));
             }
 
             if (!StringUtils.isEmpty(request.getAge())) {
