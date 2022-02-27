@@ -100,17 +100,16 @@ public class UserService implements IUserService {
         return (root, query, builder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-
             if (!StringUtils.isEmpty(request.getFirstName())) {
-                predicates.add(builder.and(builder.like(root.get("firstName"), "%" + request.getFirstName() + "%")));
+                predicates.add(builder.and(builder.like(builder.upper(root.get("firstName")), "%" + request.getFirstName().toUpperCase(Locale.ROOT) + "%")));
             }
 
-            if (!StringUtils.isEmpty(request.getEmail())) {
-                predicates.add(builder.and(builder.like(root.get("email"), "%" + request.getEmail() + "%")));
-            }
+//            if (!StringUtils.isEmpty(request.getEmail())) {
+//                predicates.add(builder.and(builder.like(root.get("email"), "%" + request.getEmail() + "%")));
+//            }
 
             if (!StringUtils.isEmpty(request.getGender())) {
-                predicates.add(builder.and(builder.equal(root.get("gender"), request.getGender().toUpperCase(Locale.ROOT))));
+                predicates.add(builder.and(builder.equal(builder.upper(root.get("gender")), request.getGender().toUpperCase(Locale.ROOT))));
             }
 
             if (!StringUtils.isEmpty(request.getAge())) {
