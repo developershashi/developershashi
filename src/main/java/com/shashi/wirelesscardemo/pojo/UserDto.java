@@ -22,7 +22,6 @@ public class UserDto {
     @NotNull(message = "firstName may not be null")
     @SerializedName("first_name")
     @Expose
-    @NotNull()
     private String firstName;
     @SerializedName("last_name")
     @Expose

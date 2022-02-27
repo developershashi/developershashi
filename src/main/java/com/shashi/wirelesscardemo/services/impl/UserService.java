@@ -4,6 +4,7 @@ import com.shashi.wirelesscardemo.enums.CommonState;
 import com.shashi.wirelesscardemo.enums.Gender;
 import com.shashi.wirelesscardemo.exceptions.UserServiceException;
 import com.shashi.wirelesscardemo.mapper.UserMapper;
+import com.shashi.wirelesscardemo.models.DeleteRequest;
 import com.shashi.wirelesscardemo.models.User;
 import com.shashi.wirelesscardemo.models.UserResponse;
 import com.shashi.wirelesscardemo.pojo.UserDto;
@@ -23,10 +24,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 
 @Service
@@ -57,6 +55,41 @@ public class UserService implements IUserService {
     @Override
     public void deleteUser(String emailid) {
         userRepository.deleteById(emailid);
+    }
+
+    @Override
+    public UserResponse deleteUserByEmail(UserDto userDto) {
+        if (userDto != null ) {
+            userRepository.deleteById(userDto.getEmail());
+            UserResponse userResponse = new UserResponse(null, CommonState.USER_CREATED.getMessage(), HttpStatus.CREATED, HttpStatus.CREATED.value());
+            return userResponse;
+        } else {
+            throw new UserServiceException("user data not found !!");
+        }
+    }
+    @Override
+    public UserResponse deleteUserByRequest(DeleteRequest deleteRequest) {
+        List<User> getDbUser = null;
+        if (deleteRequest != null ) {
+            if(!deleteRequest.getRecords().isEmpty()&& deleteRequest.getRecords().containsKey("email")){
+                List<String> emailList= deleteRequest.getRecords().get("email");
+                getDbUser=  userRepository.findAllById(emailList);
+                if(!getDbUser.isEmpty()) {
+                    userRepository.deleteAllById(emailList);
+                }else{
+                    throw new UserServiceException("no record found in db!");
+                }
+
+                UserResponse   userResponse=   new UserResponse(getDbUser, CommonState.USER_DELETED.getMessage(), HttpStatus.NO_CONTENT, HttpStatus.NO_CONTENT.value());
+                return userResponse;
+
+            }
+            else{
+                throw new UserServiceException("Id not found in request !!");
+            }
+        } else {
+            throw new UserServiceException("Id not found in request !!");
+        }
     }
 
     @Override

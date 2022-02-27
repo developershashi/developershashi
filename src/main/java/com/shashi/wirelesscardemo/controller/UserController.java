@@ -1,6 +1,7 @@
 package com.shashi.wirelesscardemo.controller;
 
 import com.shashi.wirelesscardemo.enums.Gender;
+import com.shashi.wirelesscardemo.models.DeleteRequest;
 import com.shashi.wirelesscardemo.models.User;
 import com.shashi.wirelesscardemo.models.UserResponse;
 
@@ -39,6 +40,21 @@ public class UserController {
     }
 
     //The function receives a DELETE request, deletes the User with the specified Id.
+ /*   @DeleteMapping
+    @ApiOperation(value = "Delete User", nickname = "delete user by email", notes = "Delete user by email")
+    public ResponseEntity<User> deleteUser(@Valid @RequestBody UserDto userDto) {
+        LOG.info("request received for delete user for email  is :{}", userDto);
+        userService.deleteUserByEmail(userDto);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }*/
+    //The function receives a DELETE request, deletes the User with the specified Id.
+    @DeleteMapping
+    @ApiOperation(value = "Delete User", nickname = "delete user by email", notes = "Delete user by email")
+    public ResponseEntity<UserResponse> deleteUser2(@Valid @RequestBody DeleteRequest deleteRequest) {
+        LOG.info("request received for delete user :{}", deleteRequest);
+        UserResponse userResponse= userService.deleteUserByRequest(deleteRequest);
+        return new ResponseEntity<>(userResponse,HttpStatus.NO_CONTENT);
+    }/*  //The function receives a DELETE request, deletes the User with the specified Id.
     @DeleteMapping({"/{emailId}"})
     @ApiOperation(value = "Delete User", nickname = "delete user by email", notes = "Delete user by email")
     public ResponseEntity<User> deleteUser(@PathVariable("emailId") String emailId) {
@@ -47,7 +63,7 @@ public class UserController {
         LOG.info("user deleted for email:{}", emailId);
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-    }
+    }*/
 
     //The function receives a GET request, processes it and gives back a list of
     @GetMapping(value = "/search")
