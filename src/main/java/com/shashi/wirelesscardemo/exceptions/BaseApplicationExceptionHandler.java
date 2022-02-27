@@ -15,6 +15,7 @@ import java.util.ArrayList;
 
 @ControllerAdvice
 public class BaseApplicationExceptionHandler extends ResponseEntityExceptionHandler {
+
     private static final Logger LOG = LoggerFactory.getLogger(BaseApplicationExceptionHandler.class);
     private static final String logResponse = "Application exception: {}";
 

@@ -7,6 +7,7 @@ import com.google.gson.annotations.SerializedName;
 
 import javax.annotation.Generated;
 import javax.persistence.*;
+import javax.validation.constraints.NotNull;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -14,21 +15,13 @@ import java.util.Date;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class UserDto {
 
-    @SerializedName("first_name")
-    @Expose
-    private String firstName;
-    @SerializedName("last_name")
-    @Expose
-    private String lastName;
-    @SerializedName("email")
-    @Expose
     @Id
+    @NotNull(message = "email may not be null")
     private String email;
-    @SerializedName("gender")
-    @Expose
+    @NotNull(message = "firstName may not be null")
+    private String firstName;
+    private String lastName;
     private String gender;
-    @SerializedName("birthday")
-    @Expose
     private String birthday;
 
     public String getFirstName() {

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
+import io.swagger.annotations.ApiModelProperty;
 
 import javax.annotation.Generated;
 import javax.persistence.*;
@@ -16,22 +17,19 @@ import java.util.Date;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class User {
 
-    @SerializedName("first_name")
-    @Expose
+    @Column(name = "first_name", nullable = true)
     private String firstName;
-    @SerializedName("last_name")
-    @Expose
+    @Column(name = "last_name", nullable = true)
     private String lastName;
 
-    @SerializedName("email")
-    @Expose
+    @Column(name = "email", nullable = true)
     @Id
+    @ApiModelProperty(notes = "email is primary key ")
     private String email;
-    @SerializedName("gender")
-    @Expose
+
+    @Column(name = "gender", nullable = true)
     private String gender;
-    @SerializedName("birthday")
-    @Expose
+    @Column(name = "birthday", nullable = true)
     private Date birthday;
 
     public User() {

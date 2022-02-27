@@ -10,7 +10,7 @@ import springfox.documentation.swagger2.annotations.EnableSwagger2;
 
 
 @ComponentScan(basePackages = "com.shashi.wirelesscardemo")
-@EnableJpaRepositories(basePackages = "com.shashi.wirelesscardemo.repository")
+@EnableJpaRepositories(basePackages = "com.shashi.wirelesscardemo.repositories")
 @EntityScan(basePackages = "com.shashi.wirelesscardemo")
 @SpringBootApplication
 public class WirelesscardemoApplication  {

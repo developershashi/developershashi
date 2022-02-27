@@ -3,7 +3,7 @@ package com.shashi.wirelesscardemo.utility;
 import com.google.gson.Gson;
 import com.shashi.wirelesscardemo.models.User;
 import com.shashi.wirelesscardemo.pojo.UserDto;
-import com.shashi.wirelesscardemo.repository.UserRepository;
+import com.shashi.wirelesscardemo.repositories.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.ClassPathResource;

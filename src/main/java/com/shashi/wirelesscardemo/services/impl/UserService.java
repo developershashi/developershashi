@@ -2,11 +2,12 @@ package com.shashi.wirelesscardemo.services.impl;
 
 import com.shashi.wirelesscardemo.enums.CommonState;
 import com.shashi.wirelesscardemo.exceptions.UserServiceException;
+import com.shashi.wirelesscardemo.mapper.UserMapper;
 import com.shashi.wirelesscardemo.models.User;
 import com.shashi.wirelesscardemo.models.UserResponse;
 import com.shashi.wirelesscardemo.pojo.UserDto;
 import com.shashi.wirelesscardemo.pojo.UserRequestDto;
-import com.shashi.wirelesscardemo.repository.UserRepository;
+import com.shashi.wirelesscardemo.repositories.UserRepository;
 import com.shashi.wirelesscardemo.services.IUserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +18,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import javax.persistence.criteria.Predicate;
-import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -26,7 +26,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import static com.fasterxml.jackson.databind.type.LogicalType.DateTime;
 
 @Service
 public class UserService implements IUserService {
@@ -34,12 +33,19 @@ public class UserService implements IUserService {
     @Autowired
     private UserRepository userRepository;
 
+    /**
+     * This methos is used for creating a new user in db
+     * @param userDto
+     * @return userResponse
+     */
     @Override
-    public UserResponse createUser(User user) {
+    public UserResponse createUser(UserDto userDto) {
 
-        if (user != null) {
+        if (userDto != null) {
+            User user = UserMapper.INSTANCE.dtoToEntityMapper(userDto);
             User saveUser = userRepository.save(user);
-            UserResponse userResponse = new UserResponse(saveUser, CommonState.USER_CREATED.getMessage(), HttpStatus.CREATED, HttpStatus.CREATED.value());
+            UserDto userDtoResponse = UserMapper.INSTANCE.entityToDtoMapper(saveUser);
+            UserResponse userResponse = new UserResponse(userDtoResponse, CommonState.USER_CREATED.getMessage(), HttpStatus.CREATED, HttpStatus.CREATED.value());
             return userResponse;
         } else {
             throw new UserServiceException("user data not found !!");
@@ -47,8 +53,8 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public List<User> findAllUser() {
-        return null;
+    public void deleteUser(String emailid) {
+        userRepository.deleteById(emailid);
     }
 
     @Override
@@ -74,7 +80,7 @@ public class UserService implements IUserService {
         return list;
     }
 
-    private void validator(UserRequestDto userDto){
+    private void validator(UserRequestDto userDto) {
         if (StringUtils.isEmpty(userDto.getFirstName())) {
 
         }
@@ -83,33 +89,13 @@ public class UserService implements IUserService {
 
         }
         if (!StringUtils.isEmpty(userDto.getAge())) {
-            if (userDto.getAge()<25 || userDto.getAge()>55){
+            if (userDto.getAge() < 25 || userDto.getAge() > 55) {
                 throw new UserServiceException("Age not in range");
             }
         }
 
 
     }
-
-    @Override
-    public User getUserById(String id) {
-        return null;
-    }
-
-
-    @Override
-    public void updateUser(String emailId, User user) {
-        User userfromDb = userRepository.findById(emailId).get();
-        System.out.println(userfromDb.toString());
-        //todo Mapstruct
-        userRepository.save(userfromDb);
-    }
-
-    @Override
-    public void deleteUser(String emailid) {
-        userRepository.deleteById(emailid);
-    }
-
 
     private Specification<User> getSpecification(UserRequestDto request) {
         return (root, query, builder) -> {
@@ -126,12 +112,12 @@ public class UserService implements IUserService {
             }
 
             if (!StringUtils.isEmpty(request.getAge())) {
-                String dateFormat="dd.MM.yyyy";
+                String dateFormat = "dd.MM.yyyy";
 
 //                SimpleDateFormat formatter = new SimpleDateFormat("dd.MM.yyyy");
                 LocalDate localDate = LocalDate.now().minusYears(request.getAge());
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern(dateFormat);
-                String outformat=formatter.format(localDate);
+                String outformat = formatter.format(localDate);
                 try {
                     Date date1 = new SimpleDateFormat(dateFormat).parse(outformat);
                     predicates.add(builder.and(builder.greaterThan(root.get("birthday"), date1)));

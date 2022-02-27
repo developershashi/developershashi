@@ -1,4 +1,4 @@
-package com.shashi.wirelesscardemo.repository;
+package com.shashi.wirelesscardemo.repositories;
 
 import com.shashi.wirelesscardemo.models.User;
 import org.springframework.data.jpa.repository.JpaRepository;
