@@ -40,20 +40,12 @@ public class UserController {
     @DeleteMapping({"/{emailId}"})
     @ApiOperation(value = "Delete User", nickname = "delete user by email", notes = "Delete user by email")
     public ResponseEntity<User> deleteUser(@PathVariable("emailId") String emailId) {
-        LOG.info("request received for delete user for email  is :{}", emailId );
+        LOG.info("request received for delete user for email  is :{}", emailId);
         userService.deleteUser(emailId);
-        LOG.info("user deleted for email:{}",emailId);
+        LOG.info("user deleted for email:{}", emailId);
 
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
-
-
-//    //The function receives a GET request, processes it and gives back a list of
-//    @GetMapping
-//    public ResponseEntity<List<User>> getAllUsers() {
-//        List<User> userList = userService.findAllUser();
-//        return new ResponseEntity<>(userList, HttpStatus.OK);
-//    }
 
     //The function receives a GET request, processes it and gives back a list of
     @GetMapping(value = "/search")
@@ -61,20 +53,5 @@ public class UserController {
         List<User> userList = userService.search(firstName, email, age);
         System.out.println(userList.size());
         return new ResponseEntity<>(userList, HttpStatus.OK);
-
     }
-
-//    @GetMapping({"/firstName"})
-//    public ResponseEntity<List<User>> getSearch(@PathVariable(value = "firstname") String firstName, @RequestParam String email) {
-//        List<User> userList = userService.search(firstName, email, 100);
-//        return new ResponseEntity<>(userList, HttpStatus.OK);
-//    }
-
-    @GetMapping({"/search1"})
-    public ResponseEntity<List<User>> getSearch1(String firstName) {
-        System.out.println("trigger " + firstName);
-//        List<User> userList = userService.search(firstName, email, age);
-        return new ResponseEntity<>(null, HttpStatus.OK);
-    }
-
 }
