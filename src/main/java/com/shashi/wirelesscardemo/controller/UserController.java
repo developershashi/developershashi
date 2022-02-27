@@ -44,6 +44,7 @@ public class UserController {
     @GetMapping(value = "/search")
     public ResponseEntity<List<User>> getSearch(@Nullable @RequestParam String firstName, @Nullable @RequestParam String email, @Nullable @RequestParam Integer age) {
         List<User> userList = userService.search(firstName, email, age);
+        System.out.println(userList.size());
         return new ResponseEntity<>(userList, HttpStatus.OK);
     }
 

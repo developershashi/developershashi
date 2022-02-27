@@ -1,12 +1,35 @@
 package com.shashi.wirelesscardemo.pojo;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.google.gson.annotations.Expose;
+import com.google.gson.annotations.SerializedName;
+
+import javax.annotation.Generated;
+import javax.persistence.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+@JsonInclude(value = JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class UserDto {
 
+    @SerializedName("first_name")
+    @Expose
     private String firstName;
-
+    @SerializedName("last_name")
+    @Expose
+    private String lastName;
+    @SerializedName("email")
+    @Expose
+    @Id
     private String email;
-
-    private int age;
+    @SerializedName("gender")
+    @Expose
+    private String gender;
+    @SerializedName("birthday")
+    @Expose
+    private String birthday;
 
     public String getFirstName() {
         return firstName;
@@ -14,6 +37,14 @@ public class UserDto {
 
     public void setFirstName(String firstName) {
         this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
     }
 
     public String getEmail() {
@@ -24,11 +55,30 @@ public class UserDto {
         this.email = email;
     }
 
-    public int getAge() {
-        return age;
+    public String getGender() {
+        return gender;
     }
 
-    public void setAge(int age) {
-        this.age = age;
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
+
+    public String getBirthday() {
+        return birthday;
+    }
+
+    public void setBirthday(String birthday) {
+        this.birthday = birthday;
+    }
+
+    @Override
+    public String toString() {
+        return "UserDto{" +
+                "firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
+                ", email='" + email + '\'' +
+                ", gender='" + gender + '\'' +
+                ", birthday='" + birthday + '\'' +
+                '}';
     }
 }

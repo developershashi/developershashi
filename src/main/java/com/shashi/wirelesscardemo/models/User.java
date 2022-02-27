@@ -7,13 +7,14 @@ import com.google.gson.annotations.SerializedName;
 
 import javax.annotation.Generated;
 import javax.persistence.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 @Entity
 @Table
 @JsonInclude(value = JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class User {
-
 
     @SerializedName("first_name")
     @Expose
@@ -31,7 +32,18 @@ public class User {
     private String gender;
     @SerializedName("birthday")
     @Expose
-    private String birthday;
+    private Date birthday;
+
+    public User() {
+    }
+
+    public User(String firstName, String lastName, String email, String gender, Date birthday) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.gender = gender;
+        this.birthday = birthday;
+    }
 
     public String getFirstName() {
         return firstName;
@@ -65,14 +77,16 @@ public class User {
         this.gender = gender;
     }
 
-    public String getBirthday() {
+    public Date getBirthday() {
         return birthday;
     }
 
-    public void setBirthday(String birthday) {
+    public void setBirthday(Date birthday) {
         this.birthday = birthday;
     }
 
+    @Column(name = "updated")
+    private Date updated = new Date();
 
     @Override
     public String toString() {

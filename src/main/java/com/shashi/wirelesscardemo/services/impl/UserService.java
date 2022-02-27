@@ -5,6 +5,7 @@ import com.shashi.wirelesscardemo.exceptions.UserServiceException;
 import com.shashi.wirelesscardemo.models.User;
 import com.shashi.wirelesscardemo.models.UserResponse;
 import com.shashi.wirelesscardemo.pojo.UserDto;
+import com.shashi.wirelesscardemo.pojo.UserRequestDto;
 import com.shashi.wirelesscardemo.repository.UserRepository;
 import com.shashi.wirelesscardemo.services.IUserService;
 import org.slf4j.Logger;
@@ -17,6 +18,7 @@ import org.springframework.util.StringUtils;
 
 import javax.persistence.criteria.Predicate;
 import java.text.DateFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -53,7 +55,7 @@ public class UserService implements IUserService {
     public List<User> search(String firstName, String email, Integer age) {
 
         List<User> list = null;
-        UserDto dto = new UserDto();
+        UserRequestDto dto = new UserRequestDto();
 
         if (!StringUtils.isEmpty(firstName)) {
             dto.setFirstName(firstName);
@@ -72,7 +74,7 @@ public class UserService implements IUserService {
         return list;
     }
 
-    private void validator(UserDto userDto){
+    private void validator(UserRequestDto userDto){
         if (StringUtils.isEmpty(userDto.getFirstName())) {
 
         }
@@ -84,7 +86,6 @@ public class UserService implements IUserService {
             if (userDto.getAge()<25 || userDto.getAge()>55){
                 throw new UserServiceException("Age not in range");
             }
-
         }
 
 
@@ -110,7 +111,7 @@ public class UserService implements IUserService {
     }
 
 
-    private Specification<User> getSpecification(UserDto request) {
+    private Specification<User> getSpecification(UserRequestDto request) {
         return (root, query, builder) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -131,12 +132,17 @@ public class UserService implements IUserService {
                 LocalDate localDate = LocalDate.now().minusYears(request.getAge());
                 DateTimeFormatter formatter = DateTimeFormatter.ofPattern(dateFormat);
                 String outformat=formatter.format(localDate);
-                System.out.println(outformat);
+                try {
+                    Date date1 = new SimpleDateFormat(dateFormat).parse(outformat);
+                    predicates.add(builder.and(builder.greaterThan(root.get("birthday"), date1)));
+                } catch (ParseException e) {
+                    e.printStackTrace();
+                }
+                System.out.println(localDate);
 //                DateFormat format = new SimpleDateFormat("yyyy-MM-ddTHH:mm:ssZ");
 //                DateFormat format = new SimpleDateFormat("dd-MM-yyyy");
 //                Date date = format.parse(myString);
 
-                predicates.add(builder.and(builder.greaterThan(root.get("birthday"), outformat)));
             }
 
             return builder.and(predicates.toArray(new Predicate[predicates.size()]));
