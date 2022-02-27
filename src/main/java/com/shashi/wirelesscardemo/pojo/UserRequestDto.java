@@ -11,6 +11,10 @@ public class UserRequestDto {
     private String email;
     private Integer age;
     private String gender;
+    private Integer pageNo;
+    private Integer pageSize;
+    private String sortBy;
+
 
     public String getFirstName() {
         return firstName;
@@ -50,5 +54,29 @@ public class UserRequestDto {
 
     public void setGender(String gender) {
         this.gender = gender;
+    }
+
+    public Integer getPageNo() {
+        return pageNo;
+    }
+
+    public void setPageNo(Integer pageNo) {
+        this.pageNo = pageNo;
+    }
+
+    public Integer getPageSize() {
+        return pageSize;
+    }
+
+    public void setPageSize(Integer pageSize) {
+        this.pageSize = pageSize;
+    }
+
+    public String getSortBy() {
+        return sortBy;
+    }
+
+    public void setSortBy(String sortBy) {
+        this.sortBy = sortBy;
     }
 }

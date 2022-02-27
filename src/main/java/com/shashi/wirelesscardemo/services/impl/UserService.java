@@ -14,6 +14,10 @@ import com.shashi.wirelesscardemo.services.IUserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -75,7 +79,7 @@ public class UserService implements IUserService {
             if(!deleteRequest.getRecords().isEmpty()&& deleteRequest.getRecords().containsKey("email")){
                 List<String> emailList= deleteRequest.getRecords().get("email");
                 getDbUser=  userRepository.findAllById(emailList);
-                List<String> collect = getDbUser.stream().map(o -> o.getEmail()).collect(Collectors.toList());
+                List<String> collect = getDbUser.stream().map(User::getEmail).collect(Collectors.toList());
                 if(!collect.isEmpty()) {
                     userRepository.deleteAllById(collect);
                 }else{
@@ -95,26 +99,13 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public List<User> search(String firstName, String gender, Integer age) {
+    public Page<User> search(UserRequestDto dto) {
 
-        List<User> list = null;
-        UserRequestDto dto = new UserRequestDto();
-
-        if (!StringUtils.isEmpty(firstName)) {
-            dto.setFirstName(firstName);
-        }
-        if (!StringUtils.isEmpty(gender)) {
-            dto.setGender(gender);
-        }
-        if (!StringUtils.isEmpty(age)) {
-            dto.setAge(age);
-        }
-
+//        List<User> list = null;
         validator(dto);
-
-        list = userRepository.findAll(getSpecification(dto));
-
-        return list;
+        Pageable paging = PageRequest.of(dto.getPageNo(), dto.getPageSize(), Sort.by(dto.getSortBy()));
+        Page<User> all = userRepository.findAll(getSpecification(dto), paging);
+        return all;
     }
 
     private void validator(UserRequestDto userDto) {
