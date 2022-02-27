@@ -25,6 +25,7 @@ import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -74,8 +75,9 @@ public class UserService implements IUserService {
             if(!deleteRequest.getRecords().isEmpty()&& deleteRequest.getRecords().containsKey("email")){
                 List<String> emailList= deleteRequest.getRecords().get("email");
                 getDbUser=  userRepository.findAllById(emailList);
-                if(!getDbUser.isEmpty()) {
-                    userRepository.deleteAllById(emailList);
+                List<String> collect = getDbUser.stream().map(o -> o.getEmail()).collect(Collectors.toList());
+                if(!collect.isEmpty()) {
+                    userRepository.deleteAllById(collect);
                 }else{
                     throw new UserServiceException("no record found in db!");
                 }
