@@ -1,0 +1,63 @@
+public class JmsConfig {
+    private JmsProperties jmsProperties;
+
+    public JmsConfig(JmsProperties jmsProperties) {
+        this.jmsProperties = jmsProperties;
+    }
+
+    // Publisher
+    @Bean
+    public Connection producerConnection() throws JMSException, NamingException {
+        log.info("Configuring JMS Publisher for Domain: {}", jmsProperties.getDomain);
+        return createConnection(jmsProperties.getProducer().getClientId(),
+                jmsProperties.getProducer().getUsername(),
+                jmsProperties.getProducer().getCredRef());
+    }
+
+    @Bean
+    public Session producerSession(Connection producerConnection) throws JMSException {
+        return producerConnection.createSession(true, Session.AUTO_ACKNOWLEDGE);
+    }
+
+    @Bean
+    public MessageProducer messageProducer(Session producerSession) throws JMSException, NamingException {
+        return producerSession.createProducer(getDestination(jmsProperties.getProducer().getDestination()));
+    }
+
+    // Subscriber
+    @Bean
+    public Connection consumerConnection() throws JMSException, NamingException {
+        log.info("Configuring JMS Subscriber for Domain: {}", jmsProperties.getDomain);
+        return createConnection(jmsProperties.getConsumer().getClientId(),
+                jmsProperties.getConsumer().getUsername(),
+                jmsProperties.getConsumer().getCredRef());
+    }
+
+    @Bean
+    public Session consumerSession(Connection consumerConnection) throws JMSException {
+        return consumerConnection.createSession(true, Session.AUTO_ACKNOWLEDGE);
+    }
+
+    @Bean
+    public MessageConsumer messageConsumer(Session consumerSession) throws JMSException, NamingException {
+        return consumerSession.createDurableSubscriber((Topic) getDestination(jmsProperties.getConsumer().getDestination()),
+                jmsProperties.getConsumer().getName());
+    }
+
+    // Utility methods
+    private Connection createConnection(String clientId, String user, String password) throws NamingException, JMSException {
+        ConnectionFactory connectionFactory = (ConnectionFactory) getContext().lookup(clientId);
+        return connectionFactory.createConnection(user, getPasswordFromCredRef(password));
+    }
+
+    private Destination getDestination(String destinationName) throws NamingException {
+        return (Destination) getContext().lookup(destinationName);
+    }
+
+    private InitialDirContext getContext() throws NamingException {
+        final Hashtable<String, String> env = new Hashtable<>();
+        env.put(Context.INITIAL_CONTEXT_FACTORY, "com.gs.fw.aig.jms.JmsContextFactory");
+        env.put("com.gs.fw.aig.jms.Domain", jmsProperties.getDomain);
+        return new InitialDirContext(env);
+    }
+}
