@@ -1,0 +1,78 @@
+public class JmsPublisher {
+    private Connection connection;
+    private Session session;
+    private MessageProducer messageProducer;
+
+    public JmsPublisher(Connection producerConnection, Session producerSession, MessageProducer messageProducer) {
+        this.connection = producerConnection;
+        this.session = producerSession;
+        this.messageProducer = messageProducer;
+    }
+
+    public void publish(String message, Exchange exchange) throws JMSException {
+        try {
+            if (!StringUtils.isEmpty(message)) {
+                TextMessage textMessage = createTextMessageWithRetry(message);
+                messageProducer.setDeliveryMode(DeliveryMode.PERSISTENT);
+                messageProducer.send(textMessage);
+                session.commit();
+                // Extract transaction id from JSON
+                String txnId = JsonPath.read(message, "$.cashMovementModel.sourceReference");
+                log.info("Published message for transaction id: {}", txnId);
+            }
+        } catch (JMSException jmsException) {
+            handleJmsException(jmsException, exchange);
+        }
+    }
+
+    private TextMessage createTextMessageWithRetry(String message) throws JMSException {
+        int retryCount = 0;
+        while (true) {
+            try {
+                TextMessage textMessage = session.createTextMessage();
+                textMessage.setText(message);
+                return textMessage;
+            } catch (JMSException jmsException) {
+                if (retryCount < MAX_RETRY_COUNT && isSessionClosed(jmsException)) {
+                    restartSession();
+                    retryCount++;
+                } else {
+                    throw jmsException;
+                }
+            }
+        }
+    }
+
+    private void restartSession() throws JMSException {
+        if (session != null) {
+            session.close();
+        }
+        session = connection.createSession(true, Session.AUTO_ACKNOWLEDGE);
+    }
+
+    private void handleJmsException(JMSException jmsException, Exchange exchange) throws JMSException {
+        session.rollback();
+        String feed = exchange.getProperty(AppConstants.FEED_TYPE, String.class);
+        switch (feed) {
+            case AppConstants.PAYMENT_FEED:
+                PaymentJMSException paymentJMSException = new PaymentJMSException(jmsException.getMessage());
+                paymentJMSException.initCause(jmsException);
+                throw paymentJMSException;
+            case AppConstants.ACU_FEED:
+                AcuJMSException acuJMSException = new AcuJMSException(jmsException.getMessage());
+                acuJMSException.initCause(jmsException);
+                throw acuJMSException;
+            default:
+                log.error("Unexpected transaction feed");
+        }
+    }
+
+    private boolean isSessionClosed(JMSException jmsException) {
+        // Implement the logic to check if the exception is due to a closed session
+        // You may inspect the exception's message or error code to determine session closure
+        // Return true if it's a closed session exception, otherwise return false
+        return jmsException.getMessage().contains("Session is closed");
+    }
+
+    private static final int MAX_RETRY_COUNT = 3;
+}
