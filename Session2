@@ -1,0 +1,56 @@
+public class JmsPublisher {
+    private Connection connection;
+    private Session session;
+    private MessageProducer messageProducer;
+
+    public JmsPublisher(Connection producerConnection, Session producerSession, MessageProducer messageProducer) {
+        this.connection = producerConnection;
+        this.session = producerSession;
+        this.messageProducer = messageProducer;
+    }
+
+    public void publish(String message, Exchange exchange) throws JMSException {
+        try {
+            if (!StringUtils.isEmpty(message)) {
+                // Check if the producer is closed, and if so, recreate it.
+                ensureProducerIsOpen();
+
+                TextMessage textMessage = createTextMessageWithRetry(message);
+                messageProducer.setDeliveryMode(DeliveryMode.PERSISTENT);
+                messageProducer.send(textMessage);
+                session.commit();
+                // Extract transaction id from JSON
+                String txnId = JsonPath.read(message, "$.cashMovementModel.sourceReference");
+                log.info("Published message for transaction id: {}", txnId);
+            }
+        } catch (JMSException jmsException) {
+            handleJmsException(jmsException, exchange);
+        }
+    }
+
+    private void ensureProducerIsOpen() throws JMSException {
+        if (messageProducer == null || isProducerClosed()) {
+            recreateProducer();
+        }
+    }
+
+    private boolean isProducerClosed() {
+        try {
+            messageProducer.getDeliveryMode(); // This is a non-destructive operation to check if the producer is closed.
+            return false; // If no exception is thrown, the producer is open.
+        } catch (JMSException ex) {
+            return true;
+        }
+    }
+
+    private void recreateProducer() throws JMSException {
+        if (messageProducer != null) {
+            messageProducer.close();
+        }
+        messageProducer = session.createProducer(destination); // Recreate the producer.
+    }
+
+    // The rest of your code remains the same
+
+    // ...
+}
