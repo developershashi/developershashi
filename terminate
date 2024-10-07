@@ -1,0 +1,203 @@
+import java.time.LocalDateTime;
+import java.util.List;
+
+public class TerminateOrder {
+    private String orderId;
+    private String feedType;
+    private String status;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private String submittedBy;
+    private String submitterComments;
+    private String reviewedBy;
+    private String reviewerComments;
+    private List<Long> originalTransactionIds;
+
+    // Getters and Setters
+}
+TransactionInfo.java
+
+java
+Copy code
+import java.time.LocalDateTime;
+
+public class TransactionInfo {
+    private String id;
+    private String fileName;
+    private String feed;
+    private String transactionId;
+    private String responseText;
+    private String responseCode;
+    private String transactionStatus;
+    private LocalDateTime createdAt;
+    private LocalDateTime lastModifiedAt;
+    private boolean isEmailSent;
+
+    // Getters and Setters
+}
+ResubmitOrder.java
+
+java
+Copy code
+import java.time.LocalDateTime;
+import java.util.List;
+
+public class ResubmitOrder {
+    private String orderId;
+    private String feedType;
+    private String status;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private List<ResubmitGpsRequest> resubmitGpsRequest;
+    private String reviewedBy;
+    private String frozenBy;
+    private String comments;
+
+    // Getters and Setters
+}
+
+class ResubmitGpsRequest {
+    private String transactionId;
+    private String originalTransactionId;
+    private String resubmitFileName;
+    private LocalDateTime resubmitDateTime;
+    private int gpsRequest;
+
+    // Getters and Setters
+}
+2. Repository Interfaces
+TerminateOrderRepository.java
+
+java
+Copy code
+import org.springframework.data.mongodb.repository.MongoRepository;
+import java.util.Optional;
+
+public interface TerminateOrderRepository extends MongoRepository<TerminateOrder, String> {
+    Optional<TerminateOrder> findByOrderIdAndSubmittedBy(String orderId, String kerberos);
+}
+TransactionInfoRepository.java
+
+java
+Copy code
+import org.springframework.data.mongodb.repository.MongoRepository;
+import java.util.List;
+
+public interface TransactionInfoRepository extends MongoRepository<TransactionInfo, String> {
+    List<TransactionInfo> findByTransactionIdIn(List<Long> transactionIds);
+}
+ResubmitOrderRepository.java
+
+java
+Copy code
+import org.springframework.data.mongodb.repository.MongoRepository;
+import java.util.List;
+
+public interface ResubmitOrderRepository extends MongoRepository<ResubmitOrder, String> {
+    List<ResubmitOrder> findByResubmitGpsRequest_OriginalTransactionIdIn(List<Long> originalTransactionIds);
+}
+3. Service Layer
+OrderService.java
+
+java
+Copy code
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class OrderService {
+
+    @Autowired
+    private TerminateOrderRepository terminateOrderRepository;
+
+    @Autowired
+    private TransactionInfoRepository transactionInfoRepository;
+
+    @Autowired
+    private ResubmitOrderRepository resubmitOrderRepository;
+
+    public Optional<TerminateOrder> getOrderByIdAndKerberos(String orderId, String kerberos) {
+        return terminateOrderRepository.findByOrderIdAndSubmittedBy(orderId, kerberos);
+    }
+
+    public List<TransactionInfo> getTransactionInfo(List<Long> transactionIds) {
+        return transactionInfoRepository.findByTransactionIdIn(transactionIds);
+    }
+
+    public List<ResubmitOrder> getResubmitOrders(List<Long> originalTransactionIds) {
+        return resubmitOrderRepository.findByResubmitGpsRequest_OriginalTransactionIdIn(originalTransactionIds);
+    }
+}
+4. Controller
+OrderController.java
+
+java
+Copy code
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.Optional;
+
+@RestController
+public class OrderController {
+
+    @Autowired
+    private OrderService orderService;
+
+    @GetMapping("/getOrderDetails")
+    public ResponseEntity<?> getOrderDetails(
+        @RequestParam String orderId, 
+        @RequestParam String kerberos) {
+        
+        Optional<TerminateOrder> terminateOrderOpt = orderService.getOrderByIdAndKerberos(orderId, kerberos);
+        
+        if (!terminateOrderOpt.isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        TerminateOrder terminateOrder = terminateOrderOpt.get();
+        List<TransactionInfo> originalTransactionDetails = 
+            orderService.getTransactionInfo(terminateOrder.getOriginalTransactionIds());
+        
+        List<ResubmitOrder> resubmitOrders = 
+            orderService.getResubmitOrders(terminateOrder.getOriginalTransactionIds());
+
+        // Create response object
+        OrderResponse response = new OrderResponse(terminateOrder, originalTransactionDetails, resubmitOrders);
+        
+        return ResponseEntity.ok(response);
+    }
+}
+5. Response Model
+OrderResponse.java
+
+java
+Copy code
+import java.util.List;
+
+public class OrderResponse {
+    private TerminateOrder terminateOrder;
+    private List<TransactionInfo> originalTransactionDetails;
+    private List<ResubmitOrder> resubmittedTransactionDetails;
+
+    public OrderResponse(TerminateOrder terminateOrder, 
+                         List<TransactionInfo> originalTransactionDetails, 
+                         List<ResubmitOrder> resubmittedTransactionDetails) {
+        this.terminateOrder = terminateOrder;
+        this.originalTransactionDetails = originalTransactionDetails;
+        this.resubmittedTransactionDetails = resubmittedTransactionDetails;
+    }
+
+    // Getters and Setters
+}
+Key Points:
+Service Layer: Cleanly separates the logic of fetching from multiple collections.
+Repository Layer: Efficiently queries MongoDB collections with appropriate filters.
+Controller: Minimalistic and focuses only on orchestrating the service logic.
+Response Object: Combines the results of all collections into a single structured response.
