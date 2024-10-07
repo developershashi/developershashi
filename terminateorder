@@ -1,0 +1,97 @@
+import java.time.LocalDateTime;
+import java.util.List;
+
+public class TerminateOrder {
+    private String orderId; // Corrected from orderld to orderId
+    private String feedType; // Payment feed type
+    private String status; // OPEN, CANCELLED, APPROVED, REJECTED
+    private LocalDateTime createdAt; // DateTime for created at
+    private LocalDateTime updatedAt; // DateTime for updated at
+    private String submittedBy; // Kerberos
+    private String submitterComments; // Comments from the submitter
+    private String reviewedBy; // Kerberos
+    private String reviewerComments; // Comments from the reviewer
+    private List<Long> originalTransactionIds; // List of original transaction IDs
+
+    // Getters and Setters
+
+    public String getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(String orderId) {
+        this.orderId = orderId;
+    }
+
+    public String getFeedType() {
+        return feedType;
+    }
+
+    public void setFeedType(String feedType) {
+        this.feedType = feedType;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public String getSubmittedBy() {
+        return submittedBy;
+    }
+
+    public void setSubmittedBy(String submittedBy) {
+        this.submittedBy = submittedBy;
+    }
+
+    public String getSubmitterComments() {
+        return submitterComments;
+    }
+
+    public void setSubmitterComments(String submitterComments) {
+        this.submitterComments = submitterComments;
+    }
+
+    public String getReviewedBy() {
+        return reviewedBy;
+    }
+
+    public void setReviewedBy(String reviewedBy) {
+        this.reviewedBy = reviewedBy;
+    }
+
+    public String getReviewerComments() {
+        return reviewerComments;
+    }
+
+    public void setReviewerComments(String reviewerComments) {
+        this.reviewerComments = reviewerComments;
+    }
+
+    public List<Long> getOriginalTransactionIds() {
+        return originalTransactionIds;
+    }
+
+    public void setOriginalTransactionIds(List<Long> originalTransactionIds) {
+        this.originalTransactionIds = originalTransactionIds;
+    }
+}
