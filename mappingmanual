@@ -1,0 +1,151 @@
+TerminateOrderDTO.java
+
+java
+Copy code
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Data
+@AllArgsConstructor
+public class TerminateOrderDTO {
+
+    private String orderId;
+    private String feedType;
+    private String status;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private String submittedBy;
+    private String submitterComments;
+    private String reviewedBy;
+    private String reviewerComments;
+    
+    private List<String> originalTransactionIds;
+    private List<RetryTransactionDTO> transactionInfoDetails;
+}
+RetryTransactionDTO.java
+
+java
+Copy code
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
+@Data
+@AllArgsConstructor
+public class RetryTransactionDTO {
+
+    private String id;
+    private String fileName;
+    private String feed;
+    private String transactionId;
+    private Object gpsRequest;
+    private Object gpsResponse;
+    private String responseText;
+}
+Manual Mapping Methods
+We will use a service class to map the entities (TerminateOrder and RetryTransaction) to the DTOs.
+
+TerminateOrderService.java
+
+java
+Copy code
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
+@Slf4j
+@Service
+public class TerminateOrderService {
+
+    @Autowired
+    private TerminateOrderRepository terminateOrderRepository;
+
+    @Autowired
+    private RetryTransactionRepository retryTransactionRepository;
+
+    public TerminateOrderDTO getOrderTransactions(String orderId, String kerberos) {
+        log.info("Inside TerminateOrderService getOrderTransactions() for orderId: {}", orderId);
+
+        // Fetch TerminateOrder by orderId and kerberos
+        Optional<TerminateOrder> terminateOrderOpt = terminateOrderRepository.findByOrderIdAndSubmittedBy(orderId, kerberos);
+        if (!terminateOrderOpt.isPresent()) {
+            throw new TerminateOrderIdNotFoundException("Terminate order ID not found: " + orderId);
+        }
+
+        TerminateOrder terminateOrder = terminateOrderOpt.get();
+        List<RetryTransaction> originalTransactionDetails = retryTransactionRepository.findByTransactionIdIn(terminateOrder.getOriginalTransactionIds());
+
+        // Map entities to DTOs
+        List<RetryTransactionDTO> transactionDTOs = originalTransactionDetails.stream()
+                .map(this::mapToRetryTransactionDTO)
+                .collect(Collectors.toList());
+
+        return mapToTerminateOrderDTO(terminateOrder, transactionDTOs);
+    }
+
+    // Mapper for RetryTransaction -> RetryTransactionDTO
+    private RetryTransactionDTO mapToRetryTransactionDTO(RetryTransaction transaction) {
+        return new RetryTransactionDTO(
+                transaction.getId(),
+                transaction.getFileName(),
+                transaction.getFeed(),
+                transaction.getTransactionId(),
+                transaction.getGpsRequest(),
+                transaction.getGpsResponse(),
+                transaction.getResponseText()
+        );
+    }
+
+    // Mapper for TerminateOrder -> TerminateOrderDTO
+    private TerminateOrderDTO mapToTerminateOrderDTO(TerminateOrder terminateOrder, List<RetryTransactionDTO> transactionDTOs) {
+        return new TerminateOrderDTO(
+                terminateOrder.getOrderId(),
+                terminateOrder.getFeedType(),
+                terminateOrder.getStatus(),
+                terminateOrder.getCreatedAt(),
+                terminateOrder.getUpdatedAt(),
+                terminateOrder.getSubmittedBy(),
+                terminateOrder.getSubmitterComments(),
+                terminateOrder.getReviewedBy(),
+                terminateOrder.getReviewerComments(),
+                terminateOrder.getOriginalTransactionIds(),
+                transactionDTOs
+        );
+    }
+}
+Controller Layer
+TerminateOrderController.java
+
+java
+Copy code
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class TerminateOrderController {
+
+    @Autowired
+    private TerminateOrderService terminateOrderService;
+
+    @GetMapping("/getOrderDetails")
+    public ResponseEntity<?> getOrderDetails(
+            @RequestParam String orderId, 
+            @RequestParam String kerberos) {
+
+        TerminateOrderDTO response = terminateOrderService.getOrderTransactions(orderId, kerberos);
+        return ResponseEntity.ok(response);
+    }
+}
+Benefits of This Approach:
+Separation of Concerns: The entity classes are not exposed directly to the clients. Instead, they are mapped to DTOs, promoting a clean architecture.
+Efficient Mapping: The mapping is done efficiently using Java Streams and the map() function to transform entities into DTOs.
+Extensibility: If the DTO structure needs changes in the future, you can easily modify the DTO class or the mapping logic without affecting the persistence logic in the entity classes.
+Control Over API Structure: You have full control over what gets returned in the API response, ensuring that only necessary information is included.
