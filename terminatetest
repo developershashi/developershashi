@@ -1,0 +1,142 @@
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+public class ViewTerminateOrdersServiceImplTest {
+
+    private static final Logger log = LoggerFactory.getLogger(ViewTerminateOrdersServiceImplTest.class);
+
+    @InjectMocks
+    private ViewTerminateOrdersServiceImpl viewTerminateOrdersService;
+
+    @Mock
+    private TerminateOrderRepository terminateOrderRepository;
+
+    @Mock
+    private TerminateServiceImpl terminateService;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    void testGetOpenOrders_Success() {
+        String kerberos = "testKerberos";
+        List<TerminateOrder> mockOrders = new ArrayList<>();
+        TerminateOrder order = new TerminateOrder();
+        order.setOrderId("testOrderId");
+        order.setStatus("OPEN");
+        mockOrders.add(order);
+
+        when(terminateOrderRepository.findByStatusAndSubmittedByOrderByUpdatedAtDesc(RetryConstants.OPEN, kerberos))
+                .thenReturn(mockOrders);
+
+        List<TerminateViewApiResponse> response = viewTerminateOrdersService.getOpenOrders(kerberos);
+
+        assertNotNull(response);
+        assertEquals(1, response.size());
+        assertEquals("testOrderId", response.get(0).getOrderId());
+
+        verify(terminateOrderRepository, times(1))
+                .findByStatusAndSubmittedByOrderByUpdatedAtDesc(RetryConstants.OPEN, kerberos);
+    }
+
+    @Test
+    void testGetAllOpenOrders_Success() {
+        List<TerminateOrder> mockOrders = new ArrayList<>();
+        TerminateOrder order = new TerminateOrder();
+        order.setOrderId("testOrderId");
+        order.setStatus("OPEN");
+        mockOrders.add(order);
+
+        when(terminateOrderRepository.findByStatusOrderByUpdatedAtDesc(RetryConstants.OPEN)).thenReturn(mockOrders);
+
+        List<TerminateViewApiResponse> response = viewTerminateOrdersService.getAllOpenOrders();
+
+        assertNotNull(response);
+        assertEquals(1, response.size());
+        assertEquals("testOrderId", response.get(0).getOrderId());
+
+        verify(terminateOrderRepository, times(1)).findByStatusOrderByUpdatedAtDesc(RetryConstants.OPEN);
+    }
+
+    @Test
+    void testGetClosedOrders_Success() {
+        String kerberos = "testKerberos";
+        List<TerminateOrder> mockOrders = new ArrayList<>();
+        TerminateOrder order = new TerminateOrder();
+        order.setOrderId("testOrderId");
+        order.setStatus("CLOSED");
+        mockOrders.add(order);
+
+        when(terminateOrderRepository.findByStatusNotAndSubmittedByEqualsOrderByUpdatedAtDesc(RetryConstants.OPEN, kerberos))
+                .thenReturn(mockOrders);
+
+        List<TerminateViewApiResponse> response = viewTerminateOrdersService.getClosedOrders(kerberos);
+
+        assertNotNull(response);
+        assertEquals(1, response.size());
+        assertEquals("testOrderId", response.get(0).getOrderId());
+
+        verify(terminateOrderRepository, times(1))
+                .findByStatusNotAndSubmittedByEqualsOrderByUpdatedAtDesc(RetryConstants.OPEN, kerberos);
+    }
+
+    @Test
+    void testGetOrderTransactions_Success() {
+        String orderId = "testOrderId";
+        String kerberos = "testKerberos";
+
+        TerminateOrder mockTerminateOrder = new TerminateOrder();
+        mockTerminateOrder.setOrderId(orderId);
+        mockTerminateOrder.setOriginalTransactionIds(List.of("12345"));
+
+        RetryTransaction retryTransaction = new RetryTransaction();
+        retryTransaction.setTransactionId("12345");
+
+        when(terminateService.getOrderById(orderId)).thenReturn(Optional.of(mockTerminateOrder));
+        when(terminateService.getTransactionInfo(mockTerminateOrder.getOriginalTransactionIds()))
+                .thenReturn(List.of(retryTransaction));
+
+        TerminateOrderDTO response = viewTerminateOrdersService.getOrderTransactions(orderId, kerberos);
+
+        assertNotNull(response);
+        assertEquals(orderId, response.getOrderId());
+        assertEquals(1, response.getTransactionInfoDetails().size());
+        assertEquals("12345", response.getTransactionInfoDetails().get(0).getTransactionId());
+
+        verify(terminateService, times(1)).getOrderById(orderId);
+        verify(terminateService, times(1)).getTransactionInfo(mockTerminateOrder.getOriginalTransactionIds());
+    }
+
+    @Test
+    void testGetOrderTransactions_TerminateOrderNotFound() {
+        String orderId = "nonExistentOrderId";
+        String kerberos = "testKerberos";
+
+        when(terminateService.getOrderById(orderId)).thenReturn(Optional.empty());
+
+        TerminateOrderIdNotFoundException exception = assertThrows(
+                TerminateOrderIdNotFoundException.class,
+                () -> viewTerminateOrdersService.getOrderTransactions(orderId, kerberos)
+        );
+
+        assertEquals("Terminate order ID not found: " + orderId, exception.getMessage());
+
+        verify(terminateService, times(1)).getOrderById(orderId);
+    }
+
+    // Helper methods or additional test cases
+}
