@@ -1,0 +1,35 @@
+from("file:" + config.getNasLocation() + "/incoming?antInclude="
+        + config.getInputFilePattern()
+        + "&delete=" + config.getInputFileDeleteOnRead()
+        + "&idempotent=" + config.getInputFileIdempotent()
+        + "&filterFile=${file:modified} < ${date:now-" + config.getInputFileReadDelay() + "}")
+.id("file-reader-route")
+.log(PAYMENT_ROUTE_FILE_FETCH_LOG)
+.doTry()
+    .setProperty(AppConstants.FEED_TYPE, simple(AppConstants.PAYMENT_FEED))
+    .setProperty("fileContent", simple("${body}")) // Saving initial file content in property
+    .process("decryptionProcessor") // File content decryption
+    .log(PAYMENT_ROUTE_FILE_DECRYPTION_LOG)
+    .unmarshal().json(GPSrEQUEST.class)
+    .process("fileProcessor")
+    .bean("dataProcessor", "transactionProcess")
+    .setHeader("nasPath", constant(config.getNasLocation()))
+    .setProperty("gpsRequests", simple("${body}")) // Save the parsed GPS request in property
+    .process(exchange -> {
+        // Get source reference ID from the file content
+        List<GpsRequest> gpsRequests = exchange.getProperty("gpsRequests", List.class);
+        String sourceId = gpsRequests.get(0).getSourceReferenceId(); // Assuming the source ID is in the first request
+        exchange.setProperty("isRetry", sourceId != null && sourceId.contains("retry"));
+    })
+    .to("direct:fileMove") // Always move the file
+
+    // Conditional check to publish or not
+    .choice()
+        .when(simple("${exchangeProperty.isRetry} == false"))
+            .to("direct:messagePublish") // Only publish if source reference ID does not contain 'retry'
+        .endChoice()
+    .end()
+.doCatch(UnmarshalException.class)
+    .log(LoggingLevel.ERROR, PAYMENT_ROUTE_UNMARSHAL_EXCEPTION_LOG)
+    .setProperty(EMAIL_SUBJECT, simple(PAYMENT_ROUTE_EMAIL_SUBJECT_UNMARSHAL_FAILURE))
+.end();
