@@ -1,0 +1,43 @@
+from("timer://pendingTransactions?fixedRate=true&period=" + config.getPendingTxnsCheckInterval()
+        + "&delay=" + config.getPendingTxnsCheckInitialDelay())
+    .bean("dataProcessor", "fetchPendingTransactions") // Fetch pending transactions
+    .split().body() // Split the transactions for individual processing
+    .setProperty(TRANSACTION_ID, simple("${body.transactionId}"))
+    .setProperty(EMAIL_BODY, simple(PAYMENT_ROUTE_EMAIL_BODY_PENDING_TRANSACTIONS))
+
+    // Check if the transaction is pending for more than the lookup time and update status to 'TIMEOUT'
+    .process(exchange -> {
+        TransactionInfo transaction = exchange.getIn().getBody(TransactionInfo.class);
+        LocalDateTime timeoutThreshold = LocalDateTime.now().minusHours(config.getPendingTxnsLookupTimeInHours());
+        
+        // If the transaction has been pending longer than the threshold, update the status to 'TIMEOUT'
+        if (transaction.getModifiedAt().isBefore(timeoutThreshold) 
+                && transaction.getStatus().equals("TRANSACTION_STATUS_IN_PROCESS")) {
+            transaction.setStatus("TIMEOUT");
+        }
+
+        // Update transaction status in the database
+        exchange.getIn().setBody(transaction);
+    })
+    .bean("dataProcessor", "updateTransactionStatus") // Persist the updated status
+
+    // Handle the email notification logic based on the flag
+    .choice()
+        .when(simple("${properties:isenableemail} == true && ${body.isFailureNotificationSent} == false"))
+            .setProperty(EMAIL_SUBJECT, simple(PAYMENT_ROUTE_EMAIL_SUBJECT_PENDING_TRANSACTIONS))
+            .setHeader(Exchange.FILE_NAME, simple("${body.transactionId}.json")) // Set filename
+            .marshal().json(JsonLibrary.Jackson) // Convert body to JSON
+            .to("direct:email") // Send email
+            .choice()
+                // After sending email, update the 'isFailureNotificationSent' flag
+                .when(simple("${exception} == null"))
+                    .process(exchange -> {
+                        TransactionInfo transaction = exchange.getIn().getBody(TransactionInfo.class);
+                        transaction.setFailureNotificationSent(true); // Set flag to true
+                        exchange.getIn().setBody(transaction);
+                    })
+                    .bean("dataProcessor", "updateTransactionStatus") // Update the flag in the database
+                .endChoice()
+            .end()
+        .endChoice()
+    .end();
