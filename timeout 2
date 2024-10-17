@@ -1,0 +1,58 @@
+import org.apache.camel.builder.RouteBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+@Component
+public class PendingTransactionsRoute extends RouteBuilder {
+
+    @Autowired
+    private EmailConfig emailConfig;  // Autowiring the config class
+
+    @Override
+    public void configure() throws Exception {
+        from("timer://pendingTransactions?fixedRate=true&period=" + config.getPendingTxnsCheckInterval()
+                + "&delay=" + config.getPendingTxnsCheckInitialDelay())
+            .bean("dataProcessor", "fetchPendingTransactions")
+            .split().body()
+            .setProperty("TRANSACTION_ID", simple("${body.transactionId}"))
+            .setProperty("EMAIL_BODY", simple(PAYMENT_ROUTE_EMAIL_BODY_PENDING_TRANSACTIONS))
+            .process(exchange -> {
+                TransactionInfo transaction = exchange.getIn().getBody(TransactionInfo.class);
+                LocalDateTime timeoutThreshold = LocalDateTime.now()
+                        .minusHours(Long.parseLong(config.getPendingTxnsLookupTimeInHours()));
+
+                if (transaction.getLastModifiedAt().isBefore(timeoutThreshold)
+                        && transaction.getTransactionStatus().equals(TRANSACTION_STATUS_IN_PROCESS)) {
+                    transaction.setTransactionStatus("TIMEOUT");
+                    exchange.getIn().setBody(transaction);
+                }
+            })
+            .bean("dataProcessor", "updateTransactionStatus")
+            
+            // Email notification logic based on the emailConfig.enable flag
+            .choice()
+                .when(exchange -> emailConfig.isEnable() 
+                        && !exchange.getIn().getBody(TransactionInfo.class).isFailureNotificationSent())
+                    .choice()
+                        .when(simple("${body.responseCode} == 'TSY_ACK' || ${body.responseCode} == 'SENT_TO_TSY'"))
+                            .setProperty("EMAIL_SUBJECT", simple(PAYMENT_ROUTE_EMAIL_SUBJECT_GPS_ACCEPTED_PENDING_TRANSACTIONS))
+                        .otherwise()
+                            .setProperty("EMAIL_SUBJECT", simple(PAYMENT_ROUTE_EMAIL_SUBJECT_PENDING_TRANSACTIONS))
+                    .endChoice()
+                    .setHeader(Exchange.FILE_NAME, simple("${body.transactionId}.json"))
+                    .marshal().json(JsonLibrary.Jackson)
+                    .to("direct:email")
+                    
+                    .choice()
+                        .when(simple("${exception} == null"))
+                            .process(exchange -> {
+                                TransactionInfo transaction = exchange.getIn().getBody(TransactionInfo.class);
+                                transaction.setFailureNotificationSent(true);
+                                exchange.getIn().setBody(transaction);
+                            })
+                            .bean("dataProcessor", "updateTransactionStatus")
+                    .end()
+            .endChoice()
+        .end();
+    }
+}
