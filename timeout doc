@@ -1,0 +1,134 @@
+Documentation: Handling Timeout Transactions and Sending Configurable Email Notifications
+1. Introduction
+This document outlines the solution to handle timeout transactions and send configurable email notifications based on transaction statuses in a payment processing system using Java 11, Spring Boot, and Apache Camel. The goal is to periodically fetch pending transactions, update their status to "TIMEOUT" if they are still in process beyond a threshold, and optionally send email notifications.
+
+2. Problem Statement
+The system has a set of pending transactions whose statuses need to be checked. If any transaction is still in the TRANSACTION_STATUS_IN_PROCESS state and exceeds a specific time threshold, the system should update the status to TIMEOUT and potentially send an email notification based on configurable properties.
+
+Timeout Condition: If a transaction is pending in the TRANSACTION_STATUS_IN_PROCESS state beyond a configured time threshold, it should be updated to TIMEOUT.
+Configurable Email Notification: If email notifications are enabled in the configuration, and the isFailureNotificationSent flag is false, an email is sent after marking the transaction as TIMEOUT.
+Database Updates: After sending an email, the system updates the isFailureNotificationSent flag to true.
+3. Existing Flow
+The current system has a route that periodically checks pending transactions and processes them. The timer-based route checks transactions awaiting responses from the payment system and sends email notifications for those transactions.
+
+Current Flow:
+
+Fetch pending transactions (fetchPendingTransactions).
+Split the list of transactions and iterate over each transaction.
+Check the transaction’s status (responseCode).
+Based on the response code, set the email subject and content.
+Send the email for each transaction if applicable.
+Mark the transaction as processed.
+4. New Requirements
+The new requirements introduce the following changes:
+
+Handle Timeout Transactions:
+Fetch pending transactions with status TRANSACTION_STATUS_IN_PROCESS.
+Check if each transaction exceeds the timeout threshold (config.getPendingTxnsLookupTimeInHours()).
+If the transaction exceeds the threshold, update the status to TIMEOUT.
+Configurable Email Notification:
+Add an isenableemail flag in the configuration.
+If the flag is true and the isFailureNotificationSent flag is false, send an email notification.
+Update the isFailureNotificationSent flag to true after sending the email.
+5. Solution Design
+5.1. Configuration Class
+A new configuration class (TransactionConfig) is introduced to manage the configurable properties like timeout duration and email flag.
+
+java
+Copy code
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+@Component
+@ConfigurationProperties(prefix = "transaction")
+public class TransactionConfig {
+
+    private String pendingTxnsCheckInterval;
+    private String pendingTxnsCheckInitialDelay;
+    private long pendingTxnsLookupTimeInHours;
+    private boolean isEmailEnabled;
+
+    // Getters and Setters
+    // ... (Omitted for brevity)
+}
+5.2. DataProcessor Class
+This class handles the database interaction to fetch and update transaction statuses.
+
+java
+Copy code
+import org.springframework.stereotype.Component;
+
+@Component
+public class DataProcessor {
+
+    @Autowired
+    private TransactionService transactionService;
+
+    public List<TransactionInfo> fetchPendingTransactions() {
+        return transactionService.findAllPendingPayments(
+            TRANSACTION_STATUS_IN_PROCESS, PAYMENT_FEED, LocalDateTime.now().minusHours(config.getPendingTxnsLookupTimeInHours())
+        );
+    }
+
+    public void updateTransactionStatus(TransactionInfo transaction) {
+        transactionService.updateTransaction(transaction);
+    }
+}
+5.3. Transaction Timeout Route
+This route is responsible for fetching transactions, updating statuses, and sending email notifications based on the configurable flag.
+
+java
+Copy code
+import org.apache.camel.builder.RouteBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
+
+@Component
+public class TransactionTimeoutRoute extends RouteBuilder {
+
+    @Autowired
+    private DataProcessor dataProcessor;
+
+    @Autowired
+    private TransactionConfig config;
+
+    @Override
+    public void configure() throws Exception {
+
+        from("timer://pendingTransactions?fixedRate=true&period=" + config.getPendingTxnsCheckInterval()
+                + "&delay=" + config.getPendingTxnsCheckInitialDelay())
+            .bean(dataProcessor, "fetchPendingTransactions")
+            .split().body()
+            .process(exchange -> {
+                TransactionInfo transaction = exchange.getIn().getBody(TransactionInfo.class);
+                LocalDateTime timeoutThreshold = LocalDateTime.now()
+                        .minusHours(config.getPendingTxnsLookupTimeInHours());
+
+                // Update transaction to TIMEOUT if beyond the threshold
+                if (transaction.getLastModifiedAt().isBefore(timeoutThreshold)
+                        && transaction.getTransactionStatus().equals(TRANSACTION_STATUS_IN_PROCESS)) {
+
+                    transaction.setTransactionStatus("TIMEOUT");
+
+                    // Update transaction in the database
+                    dataProcessor.updateTransactionStatus(transaction);
+                }
+            })
+            .choice()
+                // Check if email is enabled and notification has not been sent
+                .when(exchange -> config.isEmailEnabled() && !exchange.getIn().getBody(TransactionInfo.class).isFailureNotificationSent())
+                    .setProperty("EMAIL_SUBJECT", simple(PAYMENT_ROUTE_EMAIL_SUBJECT_PENDING_TRANSACTIONS))
+                    .marshal().json() // Convert body to JSON
+                    .to("direct:sendEmail") // Send email
+                    .process(exchange -> {
+                        // Update the isFailureNotificationSent flag after email
+                        TransactionInfo transaction = exchange.getIn().getBody(TransactionInfo.class);
+                        transaction.setFailureNotificationSent(true);
+                        dataProcessor.updateTransactionStatus(transaction); // Persist updated transaction
+                    })
+            .end();
+    }
+}
+5.4. Email Sending Route
