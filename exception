@@ -1,0 +1,43 @@
+from("file:" + config.getNasLocation() + "/incoming?antInclude=" + config.getInputFilePattern() + 
+    "&idempotent=" + config.getInputFileIdempotent() + "&delete=true")
+    .id("file-reader-route")
+    
+    .doTry()
+        .setProperty("fileContent", simple("${body}"))  // Saving the initial file content in a property
+        .process(ref("decryptionProcessor"))            // Decrypt the file content
+        .unmarshal().jaxb("com.gs.amd.rps.adapter.model.pain")  // Unmarshal the XML to POJO
+        .process(ref("fileProcessor"))                  // Further processing of the file
+        .bean("dataProcessor", "upsertPaymentTransactionInfo")  // Save transaction info in DB
+        .setProperty("gpsRequests", simple("${body}"))
+        .to("direct:fileMove")                          // Move the file to processed folder
+        .to("direct:messagePublish")                    // Publish message to EMS
+    
+    .doCatch(UnmarshalException.class, DataMappingException.class, DecryptionException.class, Exception.class)
+        .log(LoggingLevel.ERROR, "Exception occurred: ${exception.message}")  // Log the exception
+        
+        // Set properties for error notification and database update
+        .setProperty("EMAIL_SUBJECT", simple("File Processing Failure: ${header.CamelFileName}"))
+        .setProperty("EMAIL_ATTACHMENT_CONTENT", simple("${body}"))
+        .setProperty("transactionStatus", constant("error"))
+        .setProperty("errorType", simple("${exception.class.simpleName}"))
+        .setProperty("errorDescription", simple("File: ${header.CamelFileName}, Error: ${exception.message}"))
+        
+        // Process the error - updating the transaction in the database
+        .process(exchange -> {
+            String transactionId = exchange.getProperty("transactionId", String.class);  // Assume transactionId set earlier in the route
+            String status = exchange.getProperty("transactionStatus", String.class);
+            String errorType = exchange.getProperty("errorType", String.class);
+            String errorDescription = exchange.getProperty("errorDescription", String.class);
+            String fileName = exchange.getIn().getHeader("CamelFileName", String.class);
+
+            // Call service to update the transaction with error details
+            transactionService.updateTransactionWithError(transactionId, status, errorType, errorDescription, fileName);
+        })
+        
+        // Send email notification
+        .to("direct:sendFailureEmail")                   // Assuming this route sends an email
+        
+        // Optionally delay the next retry
+        .delay(config.getInputFileExceptionRetryDelay())
+    
+    .end();
