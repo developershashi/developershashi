@@ -1,0 +1,143 @@
+from("file:" + config.getNasLocation() + "/incoming?antInclude=" + config.getInputFilePattern() +  
+    "&idempotent=" + config.getInputFileIdempotent() + "&delete=true")
+    .id("file-reader-route")
+
+    .doTry()
+        .setProperty("fileContent", simple("${body}"))  // Saving the initial file content in a property
+        .process(ref("decryptionProcessor"))            // Decrypt the file content
+        .unmarshal().jaxb("com.gs.amd.rps.adapter.model.pain")  // Unmarshal the XML to POJO
+        .process(ref("fileProcessor"))                  // Further processing of the file
+        .bean("dataProcessor", "upsertPaymentTransactionInfo")  // Save transaction info in DB
+        .setProperty("gpsRequests", simple("${body}"))
+        .to("direct:fileMove")                          // Move the file to processed folder
+        .to("direct:messagePublish")                    // Publish message to EMS
+
+    .doCatch(UnmarshalException.class)
+        .log(LoggingLevel.ERROR, "UnmarshalException occurred: ${exception.message}")  // Log UnmarshalException
+
+        // Set properties specific to this exception
+        .setProperty("transactionStatus", constant("error"))
+        .setProperty("errorType", constant("UnmarshalException"))
+        .setProperty("errorDescription", simple("File: ${header.CamelFileName}, Error: ${exception.message}"))
+
+        .process(exchange -> {
+            handleTransactionError(exchange);
+        })
+
+        // Send failure email
+        .to("direct:sendFailureEmail")
+    
+    .doCatch(DataMappingException.class)
+        .log(LoggingLevel.ERROR, "DataMappingException occurred: ${exception.message}")  // Log DataMappingException
+
+        // Set properties specific to this exception
+        .setProperty("transactionStatus", constant("error"))
+        .setProperty("errorType", constant("DataMappingException"))
+        .setProperty("errorDescription", simple("File: ${header.CamelFileName}, Error: ${exception.message}"))
+
+        .process(exchange -> {
+            handleTransactionError(exchange);
+        })
+
+        // Send failure email
+        .to("direct:sendFailureEmail")
+    
+    .doCatch(DecryptionException.class)
+        .log(LoggingLevel.ERROR, "DecryptionException occurred: ${exception.message}")  // Log DecryptionException
+
+        // Set properties specific to this exception
+        .setProperty("transactionStatus", constant("error"))
+        .setProperty("errorType", constant("DecryptionException"))
+        .setProperty("errorDescription", simple("File: ${header.CamelFileName}, Error: ${exception.message}"))
+
+        .process(exchange -> {
+            handleTransactionError(exchange);
+        })
+
+        // Send failure email
+        .to("direct:sendFailureEmail")
+    
+    .doCatch(Exception.class)
+        .log(LoggingLevel.ERROR, "General Exception occurred: ${exception.message}")  // Log any other Exception
+
+        // Set properties specific to this exception
+        .setProperty("transactionStatus", constant("error"))
+        .setProperty("errorType", constant("GeneralException"))
+        .setProperty("errorDescription", simple("File: ${header.CamelFileName}, Error: ${exception.message}"))
+
+        .process(exchange -> {
+            handleTransactionError(exchange);
+        })
+
+        // Send failure email
+        .to("direct:sendFailureEmail")
+
+    .end();
+
+
+
+
+///////////////////////////////
+//////////////////////////////////
+
+
+private void handleTransactionError(Exchange exchange) {
+    String transactionId = exchange.getProperty("transactionId", String.class);
+    if (transactionId == null) {
+        // Generate a new transaction ID if none is found
+        transactionId = UUID.randomUUID().toString();
+        exchange.setProperty("transactionId", transactionId);
+    }
+
+    String status = exchange.getProperty("transactionStatus", String.class);
+    String errorType = exchange.getProperty("errorType", String.class);
+    String errorDescription = exchange.getProperty("errorDescription", String.class);
+    String fileName = exchange.getIn().getHeader("CamelFileName", String.class);
+
+    // Call service to update or insert transaction with error details
+    transactionService.updateTransactionWithError(transactionId, status, errorType, errorDescription, fileName);
+}
+
+
+//////////////////////////////////////
+//////////////////////////////////////
+//////////////////////////////////////
+
+
+@Service
+public class TransactionService {
+
+    @Autowired
+    private TransactionInfoRepository transactionInfoRepository;
+
+    /**
+     * Updates the transaction with error details in the database.
+     * If the transaction doesn't exist, it creates a new record with a new transaction ID.
+     *
+     * @param transactionId   The ID of the transaction to update or create.
+     * @param status          The new status, "error".
+     * @param errorType       The type of exception.
+     * @param errorDescription Detailed description of the error (message).
+     * @param fileName        The name of the file during the error.
+     */
+    public void updateTransactionWithError(String transactionId, String status, String errorType, String errorDescription, String fileName) {
+        TransactionInfo transaction = transactionInfoRepository.findById(transactionId)
+            .orElseGet(() -> {
+                // If not found, create a new TransactionInfo object
+                TransactionInfo newTransaction = new TransactionInfo();
+                newTransaction.setTransactionId(transactionId);  // Set generated transaction ID
+                return newTransaction;
+            });
+
+        // Update transaction details
+        transaction.setStatus(status);
+        transaction.setErrorType(errorType);
+        transaction.setErrorDescription(errorDescription);
+        transaction.setFileName(fileName);
+        transaction.setModifiedAt(LocalDateTime.now());    // Update timestamp
+
+        // Save transaction
+        transactionInfoRepository.save(transaction);
+    }
+}
+
