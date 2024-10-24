@@ -1,0 +1,15 @@
+@Autowired
+private Config config;  // Autowire the config class
+
+from("direct:paymentFileMappingError")
+    .to("file:" + config.getNasLocation() + "/incoming?fileName=")
+    .setProperty("EMAIL_BODY", simple("FILE_MAPPING_ERROR_EMAIL_BODY"))
+    .setBody(simple("${exchangeProperty.emailAttachmentContent}"))
+    
+    // Add a choice block to check the isEmailEnable flag using config.getIsEmailEnable()
+    .choice()
+        .when(exchange -> config.getIsEmailEnable())  // Check if email is enabled
+            .to("direct:email")  // Send email if isEmailEnable is true
+        .otherwise()
+            .log("Email sending is disabled, skipping email notification.")  // Log if email is disabled
+    .end();
